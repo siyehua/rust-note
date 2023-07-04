@@ -313,6 +313,8 @@ println!("{b}");
 
 ## 控制流
 
+### if
+
 条件语句 if, 注意 在条件判断中， else if 与  else 都是可选的
 
 ```rust
@@ -327,7 +329,17 @@ if a == 10 { // if
 let b = if a == 10 { 2 } else { 30 };
 ```
 
-#### 循环
+if let 语句，可以把枚举里的值解构出来，例如：
+
+```rust
+let some_option: Option<i32> = Some(42);
+// 使用 if let 解构 Option 枚举
+if let Some(number) = some_option {
+    println!("Option contains the value: {}", number);
+} 
+```
+
+### 循环 loop
 
 循环有 loop, for 和 while, loop 类似于 do .. while:
 
@@ -371,7 +383,7 @@ fn main() {
 }
 ```
 
-#### while
+### while
 ```rust
 fn main() {
     let a = [10, 20, 30, 40, 50];
@@ -385,7 +397,7 @@ fn main() {
 }
 ```
 
-#### for
+### for
 ```rust
 fn main() {
     let a = [10, 20, 30, 40, 50];
@@ -401,6 +413,25 @@ fn main() {
     println!("LIFTOFF!!!");
 }
 ```
+
+### match
+
+类似于 java 的 switch，或者 kotlin 的 when，比较接近 kotlin 的 when，共同点：<br>
+
+* 可以是任意的 key
+* 必须穷举所有的条件
+* 可以产生返回值
+
+```rust
+    let b = 100;
+    let a = match b {
+        10 => 2,
+        20 => 30,
+        other => 100,
+    };
+    println!("{a}");
+```
+
 
 ## Ownership: 所有权
 
@@ -547,6 +578,32 @@ let mut s3 = &mut s; // 可变引用 &mut s
 println!("{} {} {}", s1, s2, s3);
 ```
 
+#### 解除引用 * 
+
+```rust
+fn main() {
+let mut x: Box<i32> = Box::new(1);
+let a: i32 = *x;         // *x reads the heap value, so a = 1
+*x += 1;                 // *x on the left-side modifies the heap value, 
+                         //     so x points to the value 2
+
+let r1: &Box<i32> = &x;  // r1 points to x on the stack
+let b: i32 = **r1;       // two dereferences get us to the heap value
+
+let r2: &i32 = &*x;      // r2 points to the heap value directly
+let c: i32 = *r2;    // so only one dereference is needed to read it
+}
+```
+
+![堆栈情况](./images/img.png)
+
+首先：
+1. a 直接读取了 heap 中的 value，所以 a = 1
+2. *x可以直接修改 heap
+3. r1 拿到的 x 的引用，所以 r1 = &x
+4. b 通过 *r1 访问 r1 heap 中的 value，此时该 value 是 r1 本身，接着再通过 *(*r1) 拿到了 r1 heap 中的 value, 所以此时 b = 2
+5. r2 通过 *x 访问 x heap 中的 value, 此时该 value 就是 2，接着再通过 &(*x) 拿到 2 所在的 heap，所以此时 r2 = &i32 = heap 2
+6. c 通过 *r2 访问 r2 中的 value，即 c = 2
 
 #### 悬停指针 Dangling References
 
@@ -629,4 +686,676 @@ println!("{} {} {}", word, hello, world);
 
 s.clear(); // error, 因为 s 已经借了，所以无法执行 clear 操作
 println!("{} {} {}",word, hello, world);
+```
+
+## 结构体
+
+使用 struct 来定义一个结构体:
+
+```rust
+fn main(){
+    let mut user1 = User {
+        id: 10,
+        email_address: String::from("abc@gmail.com"), // 字段的顺序可以和结构体的顺序不同
+        name: String::from("William"),
+        password: String::from("123455"),
+    };
+
+    user1.id = 20;
+    println!("{}", user1.name);
+    println!("{}", user1.password);
+
+    let mut user2 = User {
+        name: String::from("siyehua"),
+        ..user1 // 被复制的对象必须卸载最后面
+    };
+    println!("{}", user1.name);
+    // println!("{}", user1.password);// 报错，因为 password 的值已经借给 user2 了
+
+}
+
+struct User {// 定义了四个字段
+    id: u32,
+    name: String,
+    password: String,
+    email_address: String,
+}
+```
+
+也可以定义 tuple structs 元组结构体, 元组结构体与普通结构的区别是，它不需要给出字段命名。<br>
+注意，相同结构的元组不能相互复制，尽管他们的字段是一样的，这点和 ts/js 是不同的
+
+```rust
+fn main(){
+    let tuple1 = MyTuple1(10, 20.0, String::from("123234"));
+    let tuple2 = MyTuple2(10, String::from("123234"), 20.0);
+    println!("{}", tuple1.0);
+}
+
+struct MyTuple1(i32, f32, String);
+
+struct MyTuple2(i32, String, f32);
+```
+
+
+### 单元结构体 Unit-like Struct 
+
+单元结构体就是一个标记，它的作用类似于一个没有任何方法的接口，这样我们可以将实现不同的单元结构的对象放在同一个数组里，这样我估计是为了更好的
+支持泛型等类型，后面我们会学到，这里我们只需要记住：
+
+`单元结构体就是没有任何字段的结构体`
+
+```rust
+struct AlwaysEqual;
+
+fn main() {
+    let subject = AlwaysEqual;
+}
+```
+
+打印结构体，默认结构体是不能打印的，可以这么修改：
+
+```rust
+fn main(){
+    let mylocation = MyLocation {
+        x: 10,
+        y: 20,
+        name: String::from("William"),
+    };
+    println!("{:#?}", mylocation);
+    println!("{:?}", mylocation);
+    dbg!(&mylocation);
+}
+
+#[derive(Debug)] // 这里必须标记才能打印
+struct MyLocation {
+    x: i32,
+    y: i32,
+    name: String,
+}
+```
+
+## 函数与方法
+
+方法：写在结构体，枚举或 trait 中，第一个参数必须是对象本身。也就是说，方法一定是某个实例的方法<br>， 使用 `obj.function_name()` 调用<br>
+函数：不需要对象就可以调用，使用 `MyClass::function_name()` 调用<br>
+
+以上面的例子为例，给它写一个方法
+
+```rust
+fn main(){
+    let mylocation = MyLocation {
+        x: 10,
+        y: 20,
+        name: String::from("William"),
+    };
+    println!("{:#?}", mylocation);
+    println!("{:?}", mylocation);
+    dbg!(&mylocation);
+    
+    mylocation.show_location();
+    let mylocation = MyLocation::create_same(40);
+    print!("x {} y {}", mylocation.x, mylocation.y);
+}
+
+impl MyLocation {
+    fn show_location(&self) { // 方法
+        println!("x: {}, y: {}", self.x, self.y);
+    }
+
+    fn create_same(size: i32) -> Self { // 函数
+        return Self {
+            x: size,
+            y: size,
+            name: String::from("same size"),
+        };
+    }
+}
+```
+
+## 枚举 Enum
+
+使用枚举更加方便，可以多多个不同的结构体关联起来，例如, 性别有男，女，使用 struct 是这么定义的；
+
+```rust
+fn main(){
+    let a = Woman {
+        name: String::from("Lisa"),
+    };
+    let b = Man {
+        name: String::from("Ben"),
+    };
+}
+
+struct Woman {
+    name: String,
+}
+
+struct Man {
+    name: String,
+}
+```
+
+这个时候，为了统一 name 属性，需要使用 `traits` 来统一，很麻烦，为了解决这个问题，可以使用枚举：
+
+```rust
+fn main(){
+    let a = Person::MAN(String::from("Ben"));
+    let b = Person::WOMAN(String::from("Lisa"));
+}
+
+enum Person {
+    MAN(String),
+    WOMAN(String),
+}
+```
+
+另外，枚举支持每一个枚举值都可以使用不同的参数：
+
+```rust
+enum MyEnum {
+    TYPE1(i32),
+    TYPE2(String),
+    TYPE3,
+}
+```
+
+## 管理 project
+package, crate, module 之前的关系:<br>
+package = project, package 里面可以有多个 crate<br>
+crate = library, 包括 binary crate :main.rs, lib crate: lib.rs, 以及每个目录下单独的 lib crate<br>
+module 包含在 crate 中，使用 mod 来定义, module 就是某个功能模块
+
+```
+foobar //整一个叫 package
+├── Cargo.toml
+├── build.rs
+└── src/
+    ├── main.rs // binary crate
+    ├── util.rs
+    ├── lib.rs // lib crate
+    └── bin/
+        └── alt.rs // binary crate
+```
+
+
+### module
+
+上面的目录结构展示了 package 和 crate ，但是没有包含 module，module 通常在 crate中，以下是一个定义在 main.rs 中的例子：
+
+```rust
+pub mod custom_mod {
+    // 这里定义了一个 module
+}
+fn main(){
+    
+}
+```
+
+cargo 会用下面三种方法查找：
+1. 首先在 mod custom_mod 后来看看有没有点大括号包裹的 module
+2. 没有，就在 main.rs 中查找 src/custom_mod.rs 文件
+3. 如果还是没有，就在 src/custom_mod/mod.rs 中找
+
+``` 
+// 这里展示第三种方式
+backyard
+├── Cargo.lock
+├── Cargo.toml
+└── src
+    ├── custom_mod
+    │   └── mod.rs
+    └── main.rs
+```
+
+```rust
+use crate::custom_mod::MyView; // 使用 custom_mod module 中的某个结构体
+
+pub mod custom_mod;
+fn main(){
+    custom_mod::eat_at_restaurant(); // 调用 eat_at_restaurant 函数
+}
+```
+
+```rust
+// src/custom_mod/mod.rs 中的内容
+pub struct MyView {
+}
+
+mod front_of_house { // 这里定义一个新的 module,  front_of_house 可是不公开
+    pub mod hosting { // 子 module 必须是公开的，不然 eat_at_restaurant 访问不了
+        pub fn add_to_waitlist() { // add_to_waitlist 函数必须是公开的，不然 eat_at_restaurant 访问不了
+            println!("add_to_waitlist");
+            aaa();
+        }
+        fn aaa(){
+            super::super::ttt(); // 可以调用父 module ，父 module 的函数不需要声明成 pub 的
+        }
+    }
+}
+
+pub fn eat_at_restaurant() { // 提供一个函数给外部调用
+    // Absolute path
+    crate::custom_mod::front_of_house::hosting::add_to_waitlist();
+
+    // Relative path
+    front_of_house::hosting::add_to_waitlist();
+}
+```
+
+struct 的属性默认是私有的，enum 的属性默认是公开的
+
+```rust
+mod back_of_house {
+    pub struct Breakfast { // 把里面的结构体改成 pub 的
+        pub toast: String, // 某个字段设置成 pub，则外部就可以访问
+        seasonal_fruit: String,
+    }
+
+    impl Breakfast {
+        pub fn summer(toast: &str) -> Breakfast {
+            Breakfast {
+                toast: String::from(toast),
+                seasonal_fruit: String::from("peaches"),
+            }
+        }
+    }
+}
+
+pub fn eat_at_restaurant() {
+    // Order a breakfast in the summer with Rye toast
+    let mut meal = back_of_house::Breakfast::summer("Rye");
+    // Change our mind about what bread we'd like
+    meal.toast = String::from("Wheat");
+    println!("I'd like {} toast please", meal.toast);
+
+    // The next line won't compile if we uncomment it; we're not allowed
+    // to see or modify the seasonal fruit that comes with the meal
+    // meal.seasonal_fruit = String::from("blueberries");
+}
+```
+
+
+```rust
+mod front_of_house2 {
+    pub mod hosting {
+        pub fn add_to_waitlist() {}
+    }
+}
+
+pub use crate::front_of_house2::hosting; // 给 use 语句加上 pub，这样相当于给 hosting 这个子 module 提取到了外部
+
+fn main() {
+    hosting::add_to_waitlist();
+}
+```
+
+## 集合 collections
+集合包括 vector, map 和 string (String 是 char 的集合)
+
+### vector
+
+```rust
+fn main(){
+    // 简单的使用
+    let v: Vec<i32> = Vec::new();
+    let mut v = vec![1, 2, 3];
+    // let v = vec![1, 2.0, 3]; // 编译会报错，2 是 float 类型，不能与 i32 混装
+    // v.push(2.0);// 报错，2.0 不是 i32 为，不可添加
+    v.push(100);
+    v.push(1);
+
+    let value = &v[2]; // 使用 index 下标进行读取
+    println!("value:{value}");
+    let value: Option<&i32> = v.get(2); // 使用 get 方法读取
+    match value {
+        Some(value) => println!("The third element is {value}"),
+        None => println!("There is no third element."),
+    }
+
+    // let value = &v[20]; // 报错，超出了 index 下标
+    // println!("value:{value}");
+}
+```
+
+
+```rust
+fn main(){
+    let mut v = vec![1,3,4,6];
+    let mut v1 = &v[2]; // 不可变的
+    v.push(3); // 可变的
+    // 报错，一个 scope 中，不能同时存在不可变的引用和可变的引用
+    // 因为 vector 的内存是连续的，添加一个新的元素(push), 可能导致重新分配内存，这两导致之前的 v1 指向的内存失效
+    // print!("v1 value:{}", v1); 
+}
+```
+
+### String
+
+string 是一种特殊的集合，它不可以使用 `str[index]` 下标来访问，因为它始终是以 UTF-8 的形式进行存储的，所以使用下标进行访问，
+可能不同的语言、编码，返回的结果是不一样的。尽管可是直接返回 byte 字节，但是 byte 字节对使用者很不直接，无法准确知道它是代表什么内容
+
+```rust
+//string 的简单使用
+fn main(){
+    let t = "fefef";
+    let mut a = String::new();
+    a.push_str(t);
+    a.push('f');
+    let a = String::from(t);
+
+    let s1 = String::from("Hello, ");
+    let s2 = String::from("world!");
+    let s3 = s1 + &s2; // note s1 has been moved here and can no longer be used
+    println!("s3:{}", &s3);
+
+
+    let s1 = String::from("Hello, ");
+    let s2 = String::from("world!");
+    // let s3 = &s1 + &s2; // 无法编译，&String 没有重写 + 符号
+    // println!("s3:{}", &s3);
+
+    let s1 = String::from("Hello, ");
+    let s2 = String::from("world!");
+    let s3 = s1 + "-" + &s2;
+    println!("s3:{}", &s3);
+}
+```
+
+### map
+
+map 的操作与 vector 基本是一直的，但是 map 在集合中没有 String 和 vector 常见，所以需要我们导包
+
+```rust
+fn main(){
+    let mut v = HashMap::new();
+    v.insert("123", 4);
+    v.insert("567", 4);
+    v.remove("567");
+    println!("{}", v.get("123").unwrap());
+    // println!("{}", v.get("456").unwrap()); // 报错，567 已经被移除
+    println!("{}", v.get("456").copied().unwrap_or(100)); // 输出 100
+
+    for (key, value) in v {
+        println!("key:{}, value:{}", key, value);
+    }
+
+
+    let field_name = String::from("Favorite color");
+    let field_value = String::from("Blue");
+    let mut map = HashMap::new();
+    // map.insert(field_name, field_value);// 直接穿 field_name 会导致 field_name 后面打印错误
+    map.insert(&field_name, &field_value);
+    // field_name and field_value are invalid at this point, try using them and
+    // see what compiler error you get!
+    println!("name:{}, value:{}", field_name, field_value);
+}
+```
+
+## 错误处理
+
+rust 的错误分成两种：可恢复的(Result) 和不可恢复的 (panic)
+
+```rust
+fn main(){
+    // let file = File::open("hello.txt");
+    // let file = match file {
+    //     Ok(f) => f,
+    //     Err(e) => panic!("open fail:{}", e.kind()), // 报错找不到文件
+    // };
+    // println!("open file success!");
+
+    let file = File::open("hello.txt");
+    if file.is_err() {
+        if file.err().unwrap().kind() == ErrorKind::NotFound { // 判断错误类型
+            println!("Can't found the file,so create it!");
+            File::create("hello.txt").expect("create error");
+        } else {
+            panic!("open fail:{}", e)
+        }
+    }
+}
+```
+
+```rust
+use std::fs::File;
+use std::io::{self, Read};
+
+fn read_username_from_file() -> Result<String, io::Error> {
+    let username_file_result = File::open("hello.txt");
+
+    let mut username_file = match username_file_result {
+        Ok(file) => file,
+        Err(e) => return Err(e),
+    };
+
+    let mut username = String::new();
+
+    match username_file.read_to_string(&mut username) {
+        Ok(_) => Ok(username),
+        Err(e) => Err(e),
+    }
+}
+
+
+// 使用？ 简化
+use std::io::{self, Read};
+
+fn read_username_from_file() -> Result<String, io::Error> {
+    let mut username_file = File::open("hello.txt")?;
+    let mut username = String::new();
+    username_file.read_to_string(&mut username)?;
+    Ok(username)
+}
+
+// 或者这样简化
+use std::fs::File;
+use std::io::{self, Read};
+
+fn read_username_from_file() -> Result<String, io::Error> {
+    let mut username = String::new();
+    File::open("hello.txt")?.read_to_string(&mut username)?;
+    Ok(username)
+}
+
+// 更简单的
+use std::fs;
+use std::io;
+
+fn read_username_from_file() -> Result<String, io::Error> {
+    fs::read_to_string("hello.txt")
+}
+
+
+// 使用 option
+fn last_char_of_first_line(text: &str) -> Option<char> {
+    text.lines().next()?.chars().last()
+}
+
+// 不返回任何东西
+use std::error::Error;
+use std::fs::File;
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let greeting_file = File::open("hello.txt")?;
+    Ok(())
+}
+
+```
+
+## 泛型，特征和生命周期 Generic Types, Traits, and Lifetimes
+
+### 泛型
+
+泛型跟其他的语言没有什么不一样，并且它在运行时的消耗和普通类型是一样的。
+
+```rust
+fn main(){
+    let v = MyType {
+        x: 10,
+        y: 10,
+    };
+    let a = v.f();
+    let b = v.f2();
+    println!("{}, {}", &a, &b);
+    let a = "my";
+    let c = return_it(&a);
+    println!("{}", &c);
+}
+
+
+// 泛型类
+struct MyType<T> {
+    x: T,
+    y: T,
+}
+
+// 泛型方法
+impl<T> MyType<T> {
+    fn f(&self) -> &T {
+        &self.x
+    }
+}
+
+// 指定泛型的的类型
+impl MyType<i32> {
+    fn f2(&self) -> &i32 {
+        &self.y
+    }
+}
+
+// 普通的泛型方法
+fn return_it<T>(v: &T) -> &T {
+    &v
+}
+```
+
+### 特征 trait
+
+trait 类似于接口，功能基本上是一样的
+
+```rust
+fn main(){
+
+    let t = Teacher { name: "Lisa".to_string() };
+    let c = Student { name: "Duo".to_string() };
+    t.print_name();
+    c.print_name();
+
+    print_obj("have a try");
+    print_obj(10);
+    print_multiple(t);
+    // print_multiple(c); // 报错，student 没有实现 Display，所以无法打印
+}
+
+struct Teacher {
+    name: String,
+}
+
+struct Student {
+    name: String,
+}
+
+trait Human {
+    // 没有实现
+    fn get_name(&self) -> String;
+    // 有默认实现
+    fn print_name(&self) {
+        println!("Your name is:{}", self.get_name())
+    }
+}
+
+impl Human for Teacher {
+    fn get_name(&self) -> String {
+        format!("{}", self.name)
+    }
+}
+
+impl Display for Teacher {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(self.name.as_str(), f)
+    }
+}
+
+impl Human for Student {
+    fn get_name(&self) -> String {
+        format!("{}", self.name)
+    }
+
+    fn print_name(&self) {
+        println!("I a student, my name is:{}", self.get_name())
+    }
+}
+
+// 限定
+fn print_obj<T: Display>(value: T) {
+    println!("{}", value);
+}
+
+// 多种组合
+fn print_multiple2<T: Display + Human>(value: T) {
+    println!("{}", value);
+}
+
+// 另外一种写法
+fn print_multiple<T>(value: T) where T: Display + Human, {
+    println!("{}", value);
+}
+
+// 无法编译，rust 中不允许返回多个不同的类型
+// fn get_human(value: bool) -> impl Human {
+//     if value {
+//         Teacher { name: "Lisa Teacher".to_string() }
+//     } else {
+//         Student { name: "Student".to_string() }
+//     }
+// }
+```
+
+### 生命周期
+
+```rust
+// 可以不声明生命周期，会自动推断
+fn longest3(x: &str) -> &str {
+    if x.len() > y.len() {
+        x
+    } else {
+        y
+    }
+}
+
+// 有两个输入，无法自动推断
+fn longest2<'a>(x: &'a str, y: &'a str) -> &'a str {
+    if x.len() > y.len() {
+        x
+    } else {
+        y
+    }
+}
+
+// fn longest(x: &str, y: &str) -> &str {
+//     if x.len() > y.len() {
+//         x
+//     } else {
+//         y
+//     }
+// }
+
+use std::fmt::Display;
+
+fn longest_with_an_announcement<'a, T>(
+    x: &'a str,
+    y: &'a str,
+    ann: T,
+) -> &'a str
+    where
+        T: Display,
+{
+    println!("Announcement! {}", ann);
+    if x.len() > y.len() {
+        x
+    } else {
+        y
+    }
+}
 ```
