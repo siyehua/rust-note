@@ -383,13 +383,28 @@ fn main() {
     // print_multiple(c); // 报错，student 没有实现 Display，所以无法打印
 }
 
+#[test]
+fn test_aaa() {
+    let a = 2 + 2;
+    // assert!(true);  // 判断是否是 true
+    assert_eq!(4, a); // 判断是否相等
+    // assert_ne!(4, 6); // 判断是否不等
+}
+
+#[test]
+fn test_fail() {
+    panic!("test fail");
+}
+
+#[test]
+#[should_panic] // 失败则表示测试通过
+fn test_fail2() {
+    panic!("test fail");
+}
+
 // 可以不声明生命周期，会自动推断
 fn longest3(x: &str) -> &str {
-    if x.len() > y.len() {
-        x
-    } else {
-        y
-    }
+    x
 }
 
 // 有两个输入，无法自动推断

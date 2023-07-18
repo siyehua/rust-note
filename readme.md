@@ -1359,3 +1359,49 @@ fn longest_with_an_announcement<'a, T>(
     }
 }
 ```
+
+## 测试 test
+
+```
+$ cargo tset // 测试所有的方法
+$ cargo test 方法名 // 仅测试指定的方法
+$ cargo test pre_xxx // 如果只输入部分方法名字，则会自动匹配所有符合的方法并进行测试
+#[ignore] 方法添加这个标记
+$ cargo test --ignored // 测试使用 ignored 可以忽略这个方法测试
+$ cargo test --show-output // 表示要输出 println 的打印
+$ cargo test --test-threads=1 // 表示只用一个线程进行测试，不并行测试
+```
+
+## 命令行
+
+命令行是一个单独的项目，[详见](https://github.com/siyehua/mingrep)
+
+```rust
+fn main() {
+    // cargo run -- siyehua testfile.txt > output.txt
+    // -- 可选参数
+    // > 输入到指定的文件
+    // env::args() 获取命令行输入的参数
+    let inputs: Vec<String> = env::args().collect();
+    let config = Config::build(&inputs).unwrap_or_else(|err| {
+        // 使用 eprintln 替换 println, 就不会输出到文件中
+        eprintln!("Problem parsing arguments: {err}");
+        process::exit(1);
+    });
+
+    run(&config).unwrap_or_else(|err|{
+        eprintln!("Read file '{}' content error: {err}", &config.file_path);
+        process::exit(1);
+    });
+}
+```
+
+其中项目中的 lib.rs 与 main.rs 同级，使用的时候可以直接通过 project::mod 导入，例如：
+
+```rust
+use mingrep::{Config, run};
+
+// 读取环境变量 env::var(环境变量 key)
+let ignore_case = env::var("IGNORE_CASE").is_ok();
+```
+
